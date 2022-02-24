@@ -58,7 +58,7 @@ router.post('/players', function(req, res) {
     let playerDetails = req.body.element;
     for(let i=0;i<players.length;i++){
         if(players[i].name===playerDetails.name){
-            res.send("Already exists");
+            return res.send("Already exists");
             break;
         }
     }players.push(playerDetails);
@@ -75,14 +75,14 @@ router.post('/players/:playerName/bookings/:bookingId', function(req, res) {
             let bookingArray = players[j].bookings;
             if(bookingArray===[]){
                 bookingArray.push(userGivenPlayer)
-                res.send(bookingArray);
+                return res.send(players);
             }else{
                     for(let k=0;k<bookingArray.length;k++){
                         if(bookingArray[k].bookingNumber===bookId){
-                            res.send("Booking already exists.")
+                            return res.send("Booking already exists.")
                         }
                     }bookingArray.push(userGivenPlayer);
-                    res.send(bookingArray);
+                    return res.send(players);
             }
         }
     }res.send("No such player exists.")

@@ -4,7 +4,8 @@
   "description": "Backend cohort for Thorium(feb-May)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon src/index.js"
   },
   "author": "",
   "license": "ISC",
@@ -14,7 +15,7 @@
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
     "moment": "^2.29.1",
-    "mongoose": "^6.2.3",
+    "mongoose": "^6.2.4",
     "nodemon": "^2.0.15"
   }
 }

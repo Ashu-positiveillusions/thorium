@@ -11,6 +11,8 @@ router.post("/login", userController.loginUser)
 
 router.get("/users/:userId",authChecker.authCheck, userController.getUserData)
 
+router.post("/users/:userId/posts",authChecker.authCheck, userController.postMessage)
+
 router.put("/users/:userId",authChecker.authCheck, userController.updateUser)
 
 router.delete("/users/:userId",authChecker.authCheck, userController.deleteUser)

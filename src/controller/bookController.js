@@ -2,7 +2,7 @@ const BooksModel=require("../models/booksModel");
 const UserModel=require("../models/userModel");
 const ReviewModel=require("../models/reviewModel");
 const moment = require('moment')
-const { get } = require("../route/route");
+const { get } = require("../routes/route");
 var ObjectId = require("mongoose").Types.ObjectId;
 
 const isValidObjectId= function (a){

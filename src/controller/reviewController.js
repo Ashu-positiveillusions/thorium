@@ -94,7 +94,7 @@ const updateReview= async function(req, res)
     if(!checkObjectId1) return res.status(400).send({status:false, message: "Please enter a valid reviewId"})
 
     //checking if review exists
-    let review1= await ReviewModel.findOne({reviewId, isDeleted:false})
+    let review1= await ReviewModel.findOne({_id:reviewId, isDeleted:false})
     if(!review1) return res.status(404).send({status:false, message:'No such review exists'})
 
     //checking if review exists for the same book

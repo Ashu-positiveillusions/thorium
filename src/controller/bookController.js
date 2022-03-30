@@ -3,6 +3,7 @@ const UserModel=require("../models/userModel");
 const ReviewModel=require("../models/reviewModel");
 const moment = require('moment')
 const { get } = require("../routes/route");
+const { send } = require("express/lib/response");
 var ObjectId = require("mongoose").Types.ObjectId;
 
 const isValidObjectId= function (a){
@@ -57,6 +58,7 @@ try{
     if(subcategory.length==0) return res.status(400).send({status: false, message: "Please provide proper subcategory to create."})
 
     //checks for valid userId format
+    if(userId !== req.query.userId) return res.status(400).send({status: false, message: "Please create a book for the loggedIn user"})
     let checkObjectId = isValidObjectId(userId)
     if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid userId"})
 
@@ -73,9 +75,9 @@ try{
     if(duplicateISBN) return res.status(400).send({status:false,message:"ISBN already exists."})
 
     // date validation for releasedAt
-   // releasedAt=releasedAt.format()
     let validity = moment(releasedAt, "YYYY-MM-DD",true).isValid();
     if(!validity) return res.status(400).send({status:false,message:"input a valid date in YYYY-MM-DD format."})
+    // releasedAt = moment(releasedAt).format("YYYY-MM-DD")
     
     let book=await BooksModel.create(bookData);
     return res.status(201).send({status:true, message:'Success',data:book})
@@ -206,6 +208,7 @@ try{
 
     if(keys.includes("userId")){
         let userId = details.userId
+        if(userId !== req.query.userId) return res.status(400).send({status: false, message: "Please update a book for the loggedIn user"})
         let checkObjectId = isValidObjectId(userId)
         if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid userId"})
         let user = await UserModel.findOne({_id:userId});

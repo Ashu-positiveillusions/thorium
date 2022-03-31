@@ -31,7 +31,9 @@ try{
     if(Object.keys(bookData).length==0) return res.status(400).send({status:false, message:"Please enter book details"})
 
     let subcategory=bookData.subcategory;
+    let reviews = bookData.reviews;
     delete bookData.subcategory;
+    delete bookData.reviews;
 
     let keys = Object.keys(bookData);
     for(let i=0; i<keys.length; i++){
@@ -43,7 +45,7 @@ try{
     // destructuring to get all values in various variables
     let {title, excerpt, ISBN, category, userId, releasedAt} = bookData;
     bookData.subcategory=subcategory;
-
+    bookData.reviews=reviews;
     // validation which are must required
     if(!title) return res.status(400).send({status: false, message: "Please provide proper title to create."})
     if(!excerpt) return res.status(400).send({status: false, message: "Please provide proper excerpt to create."})

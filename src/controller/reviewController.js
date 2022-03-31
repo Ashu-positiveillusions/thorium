@@ -31,7 +31,9 @@ const addReview=async function(req, res)
 
     let review= req.body;
     //checking if user is providing review
-    if(Object.keys(review).length==0) return res.status(400).send({status:true, message:'Please add review'})
+    if(Object.keys(review).length==0) return res.status(400).send({status:false, message:'Please add review'})
+
+    if(!(review.bookId)) return res.status(400).send({status:false, message:'Please provide userId in body to add.'})
 
     //adding mandatory reviewedAt field to review 
     if(!(review.reviewedAt)){
@@ -69,7 +71,7 @@ const addReview=async function(req, res)
     
     let booksData= JSON.parse(JSON.stringify(bookReviewCount));
     booksData.reviewsData=totalReviews;    
-    return res.status(200).send({status:true, message:'Books List', data: booksData}) 
+    return res.status(201).send({status:true, message:'Books List', data: booksData}) 
 
 }catch(error){
     return res.status(500).send({status:false, Error: error.message})

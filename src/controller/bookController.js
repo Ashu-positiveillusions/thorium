@@ -13,12 +13,12 @@ const isValidObjectId= function (a){
         
         if(b == a) //comparing converted object Id with input value
         {       
-            return true
+            return true;
         }else{
                 return false;
             }
     }else{
-        return false
+        return false;
     }
 }
 
@@ -103,9 +103,9 @@ try{
 
     let keys = Object.keys(filter);
     for(let i=0; i<keys.length; i++){
-        if(!(filter[keys[i]])) return res.status(400).send({status:false, message:"Please provide proper filters."})
+        if(!(filter[keys[i]])) return res.status(400).send({status:false, message: `Please provide proper ${keys[i]}.`})
         filter[keys[i]]=filter[keys[i]].trim();
-        if(!(filter[keys[i]])) return res.status(400).send({status:false, message:"Please provide proper filters."})
+        if(!(filter[keys[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys[i]}.`})
 
     }
     if(keys.includes("userId")){

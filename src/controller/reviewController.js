@@ -47,8 +47,7 @@ const addReview=async function(req, res)
     let {reviewedBy, rating}= review
     if(!reviewedBy){
         reviewedBy="Guest"
-    }
-    else{
+    }else{
         reviewedBy=reviewedBy.trim();
         if(!reviewedBy)  reviewedBy= "Guest"           
         review.reviewedBy=reviewedBy;

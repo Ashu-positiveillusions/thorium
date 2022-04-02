@@ -1,85 +1,72 @@
 const BooksModel=require("../models/booksModel");
 const UserModel=require("../models/userModel");
 const ReviewModel=require("../models/reviewModel");
+const validator=require("../validator/validator")
 const moment = require('moment')
 const { get } = require("../routes/route");
-const { send } = require("express/lib/response");
-var ObjectId = require("mongoose").Types.ObjectId;
 
-const isValidObjectId= function (a){
-    if((ObjectId.isValid(a)))//checking for 12 bytes id in input value 
-    {  
-        let b =  (String)(new ObjectId(a))//converting input value in valid object Id
-        
-        if(b == a) //comparing converted object Id with input value
-        {       
-            return true;
-        }else{
-                return false;
-            }
-    }else{
-        return false;
-    }
-}
 
 const createBooks=async function(req,res){
     
 try{
     let bookData=req.body;
     
-    // checking if we get any data from request body
-    if(Object.keys(bookData).length==0) return res.status(400).send({status:false, message:"Please enter book details"})
+    
+    //checks for valid userId format    
+    let checkObjectId = validator.isValidObjectId(bookData.userId)
+    if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid userId"})
+    if(bookData.userId !== req.headers["userid"]) return res.status(401).send({status: false, message: "Please create a book for the loggedIn user as you are not authorized"})
 
-    let subcategory=bookData.subcategory;
-    let reviews = bookData.reviews;
+    // checking if we get any data from request body
+    if(!(validator.isValid(bookData))) return res.status(400).send({status:false, message:"Please enter book details"})
+
+    if(bookData.reviews)  return res.status(400).send({status:false, message:"Please don't provide reviews (count)"})
+    // validation which are must required
+    let keys = Object.keys(bookData);
+    let keys1 = ["title","excerpt","userId","ISBN","category","releasedAt"]
+    for(let i=0;i<keys1.length;i++){
+        if(!(keys.includes(keys1[i]))){
+            return res.status(400).send({status:false,message:`Please enter ${keys1[i]}`})
+        }
+    }
+    //alternate method for validation of must required-title,excerpt,etc.
+    // if(!(validator.isValid(bookData.title))) return res.status(400).send({status: false, message: "Please provide proper title to create."})
+    
+    //As subcategory is array of string type hence deleted subcategory from bookData as .trim() doesn't works on it 
+    let subcategory=bookData.subcategory
+    let reviews=bookData.reviews
     delete bookData.subcategory;
     delete bookData.reviews;
 
-    let keys = Object.keys(bookData);
+    keys=Object.keys(bookData)
+    //and checks for rest data if provided or not and also removed empty spaces if there   
     for(let i=0; i<keys.length; i++){
-        if(!(bookData[keys[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys[i]} to create`})
+        if(!(validator.isValid(bookData[keys[i]]))) return res.status(400).send({status: false, message: `Please provide proper ${keys[i]} to create`})
         bookData[keys[i]]=bookData[keys[i]].trim();
-        if(!(bookData[keys[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys[i]} to create`})
-    }
-
-    // destructuring to get all values in various variables
-    let {title, excerpt, ISBN, category, userId, releasedAt} = bookData;
+        }
     bookData.subcategory=subcategory;
     bookData.reviews=reviews;
-    // validation which are must required
-    if(!title) return res.status(400).send({status: false, message: "Please provide proper title to create."})
-    if(!excerpt) return res.status(400).send({status: false, message: "Please provide proper excerpt to create."})
-    if(!userId) return res.status(400).send({status: false, message: "Please provide proper userId to create."})
-    if(!ISBN) return res.status(400).send({status: false, message: "Please provide proper ISBN to create."})
-    if(!category) return res.status(400).send({status: false, message: "Please provide proper category to create."})
-    if(!subcategory) return res.status(400).send({status: false, message: "Please provide proper subcategory to create."})
-    if(!releasedAt) return res.status(400).send({status: false, message: "Please provide proper releasedAt date to create."})
 
-    //validation of subcategory    
-    subcategory = bookData.subcategory;
-    if(subcategory.length==0) return res.status(400).send({status: false, message: "Please provide proper subcategory to create."})
+    //validation of subcategory      
+    if(!(validator.isValid(subcategory))) return res.status(400).send({status: false, message: "Please provide proper subcategory to create."})
 
-    //checks for valid userId format
-    if(userId !== req.query.userId) return res.status(400).send({status: false, message: "Please create a book for the loggedIn user"})
-    let checkObjectId = isValidObjectId(userId)
-    if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid userId"})
+    // destructuring to get all values in various variables
+    let {title, ISBN, userId, releasedAt} = bookData;
 
     //checks for valid user
     let user= await UserModel.findById(userId)
     if(!user) return res.status(404).send({status: false, message: "User doesn't exists"})
 
-    // duplicity check of title
-    let duplicateTitle = await BooksModel.findOne({title:title});
-    if(duplicateTitle) return res.status(400).send({status:false,message:"title already exists."})
-
-    // duplicity check of ISBN
-    let duplicateISBN = await BooksModel.findOne({ISBN:ISBN});
-    if(duplicateISBN) return res.status(400).send({status:false,message:"ISBN already exists."})
+    // duplicity check of title and ISBN
+    let duplicate = await BooksModel.find({$or:[{title:title},{ISBN:ISBN}]});
+    for(let i=0;i<duplicate.length;i++){
+        if(duplicate[i].title==title) return res.status(400).send({status:false,message:"title already exists."})
+        if(duplicate[i].ISBN==ISBN) return res.status(400).send({status:false,message:"ISBN already exists."})
+    }    
 
     // date validation for releasedAt
     let validity = moment(releasedAt, "YYYY-MM-DD",true).isValid();
     if(!validity) return res.status(400).send({status:false,message:"input a valid date in YYYY-MM-DD format."})
-    // releasedAt = moment(releasedAt).format("YYYY-MM-DD")
     
     let book=await BooksModel.create(bookData);
     return res.status(201).send({status:true, message:'Success',data:book})
@@ -102,30 +89,31 @@ try{
 
         return res.status(200).send({status:true,message: 'Books list', data:books})
     }
-
+    //checks for proper filters provided from query params
     let keys = Object.keys(filter);
     for(let i=0; i<keys.length; i++){
-        if(!(filter[keys[i]])) return res.status(400).send({status:false, message: `Please provide proper ${keys[i]}.`})
+        if(!(validator.isValid(filter[keys[i]]))) return res.status(400).send({status:false, message:`Please provide proper ${keys[i]} filter`})
         filter[keys[i]]=filter[keys[i]].trim();
-        if(!(filter[keys[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys[i]}.`})
-
     }
+
+    //checks if userId is provided and a valid one
     if(keys.includes("userId")){
         let userId = filter.userId
-        let checkObjectId = isValidObjectId(userId)
+        let checkObjectId = validator.isValidObjectId(userId)
         if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid userId"})
     }
 
+    //checks if subcategory is provided
     if(keys.includes("subcategory")){
         let array=filter.subcategory;
         delete filter.subcategory;
-
+        //if other filters are provided with subcategory 
         if(Object.keys(filter).length!=0){
         let books=await BooksModel.find({$and:[{isDeleted:false}, filter,{subcategory:{$in:array}}]}).select({_id:1, title:1, excerpt:1, userId:1, category:1, releasedAt:1, reviews:1}).sort({title:1})
         if(books.length==0) return res.status(404).send({status:false, message: "No Book found"})  
     
         return res.status(200).send({status:true,message: 'Books list', data:books})
-        }else{
+        }else{//if only subcategory is provided
             let books=await BooksModel.find({$and:[{isDeleted:false}, {subcategory:{$in:array}}]}).select({_id:1, title:1, excerpt:1, userId:1, category:1, releasedAt:1, reviews:1}).sort({title:1})
             if(books.length==0) return res.status(404).send({status:false, message: "No Book found"})  
         
@@ -151,7 +139,7 @@ try{
     let bookId=req.params.bookId;
 
     //checks for valid bookId format
-    let checkObjectId = isValidObjectId(bookId)
+    let checkObjectId = validator.isValidObjectId(bookId)
     if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid bookId"})
 
     //finding book by bookId
@@ -178,91 +166,62 @@ try{
     let bookId=req.params.bookId;
 
     //checks for valid bookId format
-    let checkObjectId = isValidObjectId(bookId)
-    if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid bookId"})
-
-    //if no updations data is provided
-    let details= req.body;
-    if(Object.keys(details).length==0) return res.status(400).send({status:false, message:'Please enter book details to update'}) 
-    
-    
-    let keys = Object.keys(details);
-    if(keys.includes("subcategory")) {
-        
-        let subcategory=details.subcategory;
-        delete details.subcategory;  
-        let keys1=Object.keys(details);
-        for(let i=0; i<keys1.length; i++){
-            if(!(details[keys1[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys1[i]} to update`})
-            details[keys1[i]]=details[keys1[i]].trim();
-            if(!(details[keys1[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys1[i]} to update`})
-        }
-        details.subcategory=subcategory;
-    }else{
-        for(let i=0; i<keys.length; i++){
-            if(!(details[keys[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys[i]} to update`})
-            details[keys[i]]=details[keys[i]].trim();
-            if(!(details[keys[i]])) return res.status(400).send({status:false, message:`Please provide proper ${keys[i]} to update`})
-
-        }
-
-    }
-
-    if(keys.includes("userId")){
-        let userId = details.userId
-        if(userId !== req.query.userId) return res.status(400).send({status: false, message: "Please update a book for the loggedIn user"})
-        let checkObjectId = isValidObjectId(userId)
-        if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid userId"})
-        let user = await UserModel.findOne({_id:userId});
-        if(!user) return res.status(404).send({status: false, message: "user does not exist in our database."})
-    }
-    //user cannot delete a book while updating it
-    if(details.isDeleted==true)  return res.status(400).send({status:false, message:'You cannot delete book while updating'})
-    
-    //checking duplicity of title
-    let title=details.title
-    if(title!=undefined){
-        let duplicateTitle= await BooksModel.findOne({title});
-        if(duplicateTitle) return res.status(400).send({status:false, message:'title already exists'})
-    }   
-    
-    //checking duplicity of ISBN
-    let ISBN=details.ISBN
-    if(ISBN!=undefined){
-        let duplicateISBN= await BooksModel.findOne({ISBN});
-        if(duplicateISBN) return res.status(400).send({status:false, message:'ISBN already exists'})
-    }
+    if(!(validator.isValidObjectId(bookId))) return res.status(400).send({status:false, message: "Please enter a valid bookId in path params"})
 
     let book= await BooksModel.findOne({_id:bookId, isDeleted:false})
         if(!book) return res.status(404).send({status:false, message:"No such book exists"})
+        if(req.headers["userid"]!=book.userId) return res.status(401).send({status:false, message:'You are not authorized to make changes'})
 
-    keys=Object.keys(details)
+    //if no updations data is provided
+    let details= req.body;
+    if(!(validator.isValid(details))) return res.status(400).send({status:false, message:'Please enter book details to update'}) 
+    
+    //boolean of 0 is false
+    if(details.reviews||details.reviews==0) return res.status(400).send({status:false, message:'You cannot update review count'}) 
+
+    let keys = Object.keys(details);
+    for(let i=0;i<keys.length;i++){
+        if(!(validator.isValid(details[keys[i]])))  return res.status(400).send({status:false, message:`Please provide proper ${keys[i]} to update`})
+        details[keys[i]] = details[keys[i]].trim();
+    }
+    
+    //checks if userId is provided in updation
+    if(keys.includes("userId")){
+        //checks for valid userId
+        if(!(validator.isValidObjectId(details.userId))) return res.status(400).send({status:false, message: "Please enter a valid userId in ObjectId format "})
+        let user = await UserModel.findOne({_id:details.userId});
+        if(!user) return res.status(404).send({status: false, message: "user does not exist in our database."})
+    }
+
+    //user cannot delete a book while updating it
+    if(details.isDeleted==true)  return res.status(400).send({status:false, message:'You cannot delete book while updating'})
+    
+    //checking duplicity of title and ISBN
+    let {title, ISBN } =details
+    let duplicate = await BooksModel.find({$or:[{title:title},{ISBN:ISBN}]});
+    for(let i=0;i<duplicate.length;i++){
+        if(duplicate[i].title==title) return res.status(400).send({status:false,message:"title already exists."})
+        if(duplicate[i].ISBN==ISBN) return res.status(400).send({status:false,message:"ISBN already exists."})
+    }
+
+    
+    //updating subcategory in existing subcategory and removing duplication in subcategory 
     if(keys.includes("subcategory")){
         let array=details.subcategory.split(",");
         delete details.subcategory;
         let prevSubcategory=book.subcategory;
         let arr=[];
-        for(let i=0;i<array.length;i++)
-        {
+        //checking if subcategory already exists
+        for(let i=0;i<array.length;i++){
             if(!(prevSubcategory.includes(array[i].trim()))){
             arr.push(array[i].trim())
             }
-        }
-        
-        let newArray=prevSubcategory.concat(arr)
-        
-
-        if(Object.keys(details).length!=0)
-        {
-            let updationDetails2= await BooksModel.findOneAndUpdate({_id:bookId, isDeleted:false},{subcategory:newArray},{new:true})
-            if(!updationDetails2) return res.status(404).send({status:false,message:"Book not found"})
-            let updationDetails3= await BooksModel.findOneAndUpdate({_id:bookId, isDeleted:false},details,{new:true})
-            return res.status(200).send({status:true, message:'Success', data:updationDetails3})
-        }else{
-            let updationDetails1= await BooksModel.findOneAndUpdate({_id:bookId, isDeleted:false},{subcategory:newArray},{new:true})
-            if(!updationDetails1) return res.status(404).send({status:false,message:"Book not found"})
-            return res.status(200).send({status:true, message:'Success', data:updationDetails1})
-            }
+        }        
+        let newArray=prevSubcategory.concat(arr)  
+        details.subcategory=newArray
+        let updationDetails= await BooksModel.findOneAndUpdate({_id:bookId, isDeleted:false},details,{new:true})
+        if(!updationDetails) return res.status(404).send({status:false,message:"Book not found"})
+        return res.status(200).send({status:true, message:'Success', data:updationDetails})
     }
     //updating book after all validations
     let updationDetails= await BooksModel.findOneAndUpdate({_id:bookId, isDeleted:false},details,{new:true})
@@ -275,21 +234,22 @@ try{
 }
 }
 
-
 const deleteBooksByBookId= async function(req,res)
 {
     try{
     
-    let bookId=req.params.bookId;
+    let bookId=req.params.bookId;    
     
     //checks for valid bookId format
-    let checkObjectId = isValidObjectId(bookId)
-    if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid bookId"})
+    if(!(validator.isValidObjectId(bookId))) return res.status(400).send({status:false, message: "Please enter a valid bookId"})
 
+    let book=await BooksModel.findById(bookId);
+    if(!book) return res.status(404).send({status:false, message:'No such book exists or might be already deleted'})
+    if(req.headers["userid"]!=book.userId) return res.status(401).send({status:false, message:'You are not authorized to delete'})
+    
     //deleting the book if it exists in our db and is not already deleted
     let deleteBook= await BooksModel.findOneAndUpdate(
-        {_id:bookId, isDeleted:false}, {isDeleted:true, deletedAt:Date.now()}, {new:true})
-    if(!deleteBook) return res.status(404).send({status:false, message:'No such book exists or might be already deleted'})
+        {_id:bookId, isDeleted:false}, {isDeleted:true, deletedAt:Date.now()}, {new:true})    
     
     let deleteReview= await ReviewModel.updateMany(
         {bookId:bookId, isDeleted:false}, {isDeleted:true},{new:true})

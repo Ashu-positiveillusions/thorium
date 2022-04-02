@@ -1,6 +1,7 @@
 const UserModel=require("../models/userModel")
-const validator=require('email-validator')
+const validator1=require('email-validator')
 const jwt=require('jsonwebtoken')
+const validator=require("../validator/validator")
 
 
 const registerUser= async function(req,res){
@@ -9,70 +10,45 @@ try{
     const userInfo=req.body;
     
     // checking if valid user info given
-    if(Object.keys(userInfo).length==0) return res.status(400).send({status:false, message:"Please provide User's Info"})
-
+    if(!(validator.isValid(userInfo))) return res.status(400).send({status:false, message:"Please provide User's Info"}) 
+    
     // validation of title
-    let title=userInfo.title;
-    if(!title) return res.status(400).send({status:false, message:"Please provide a title"})
-
+    if(!(validator.isValid(userInfo.title))) return res.status(400).send({status:false, message:"Please provide a title"}) 
     userInfo.title = userInfo.title.trim();
-    title=title.trim();
-
-    if(!title) return res.status(400).send({status:false, message:"Please provide a title"})
-    if(!(title=="Mr" || title=="Miss" || title=="Mrs") ) return res.status(400).send({status:false, message:"Please provide a valid title from [Mr, Mrs, Miss]"})
+    if(!(userInfo.title=="Mr" || userInfo.title=="Miss" || userInfo.title=="Mrs") ) return res.status(400).send({status:false, message:"Please provide a valid title from [Mr, Mrs, Miss]"})
     
     // validation of name
-    let name=userInfo.name;
-    if(!name) return res.status(400).send({status:false, message:"Please provide your name"})
-
+    if(!(validator.isValid(userInfo.name))) return res.status(400).send({status:false, message:"Please provide your name"})
     userInfo.name = userInfo.name.trim();
-    name=name.trim();
-
-    if(!name) return res.status(400).send({status:false, message:"Please provide your name"})
 
     // validation of email
-    let email = userInfo.email;
-    if(!email) return res.status(400).send({status:false, message:"Please provide your Email Id"})
-
+    if(!(validator.isValid(userInfo.email))) return res.status(400).send({status:false, message:"Please provide your Email Id"})
     userInfo.email = userInfo.email.trim();
-    email=email.trim();
-
-    if(!email) return res.status(400).send({status:false, message:"Please provide your Email Id"})
-    if(validator.validate(email)== false)return res.status(400).send({status:false, msg: "Please input a valid email"})
-    
-    let duplicateEmail = await UserModel.findOne({ email:email });
-    if (duplicateEmail) return res.status(400).send({ status: false, message: "Email Id is already in use" });
-
+    if(validator1.validate(userInfo.email)== false)return res.status(400).send({status:false, msg: "Please input a valid email"})
+        
     // validation of phone Number
-    let mobile = userInfo.phone;
-    if (!mobile) return res.status(400).send({ status: false, message: "Please Enter Mobile Number" });
-
+    if (!(validator.isValid(userInfo.phone))) return res.status(400).send({ status: false, message: "Please Enter Mobile Number" });
     userInfo.phone = userInfo.phone.trim();
-    mobile=mobile.trim();
+    let mobileCheck=validator.checkIndianNumber(userInfo.phone)
+    if(!mobileCheck) return res.status(400).send({status:false, message:"Please enter a valid Phone"})
 
-    if (!mobile) return res.status(400).send({ status: false, message: "Please Enter Mobile Number" });
-        function checkIndianNumber(b){  
-            var a = /^[6-9]\d{9}$/gi;  
-                if (a.test(b))   
-                {  
-                    return true;  
-                }   
-                else   
-                {  
-                    return false; 
-                }  
-        };
-    let mobileCheck = checkIndianNumber(mobile);
-    if(mobileCheck==false) return res.status(400).send({status:false, message:"Please enter a valid mobile number"})
-
-    let duplicateNumber = await UserModel.findOne({phone:mobile });
-    if (duplicateNumber)    return res.status(400).send({ status: false, message: "Mobile Number is already in use" });
-    
+    //duplicacy check
+    let duplicate = await UserModel.find({$or:[ {email:userInfo.email},{phone:userInfo.phone}]});
+    if(duplicate.length!=0){
+        for(let i=0;i<duplicate.length;i++){
+            if(duplicate[i].email==userInfo.email) return res.status(400).send({ status: false, message: "Email Id is already in use" });
+            if(duplicate[i].phone==userInfo.phone) return res.status(400).send({ status: false, message: "Phone number is already in use" });
+        }
+}
     // password validation
-    let password=userInfo.password;
-    if(!password)  return res.status(400).send({ status: false, message: "Please provide a password" });
-
-    if(! (password.length>=8 && password.length<=15 ))  return res.status(400).send({ status: false, message: "Enter a valid password in range of 8 to 15" });
+    if(!(validator.isValid(userInfo.password)))  return res.status(400).send({ status: false, message: "Please provide a password" });
+    if(! ((userInfo.password).length>=8 && (userInfo.password).length<=15 ))  return res.status(400).send({ status: false, message: "Enter a valid password in range of 8 to 15" });
+    
+    //address validation
+    let address=userInfo.address
+    if(typeof(address)!="object"){
+        return res.status(400).send({status:false, message:"Address should be in Object format"})
+    }
     
     const data=await UserModel.create(userInfo);
     return res.status(201).send({status:true, message:'Success',data:data})
@@ -82,26 +58,27 @@ try{
 }
 }
 
+
 const loginUser=async function(req,res){
 try{
-    let email=req.body.email;
-    let pswd=req.body.password;
+    let { email, password } = req.body;
 
     //checking if email and password are there..
     if(!email) return res.status(400).send({status:false, message: "Please input a email"})
-    if(!pswd) return res.status(400).send({status:false, message: "Please input password"})
+    if(!password) return res.status(400).send({status:false, message: "Please input password"})
 
     email=email.trim();
     if(!email) return res.status(400).send({status:false, message: "Please input a email"})
 
     // checking if a user exist with these credentials
-    let loggedUser= await UserModel.findOne({email:email,password:pswd})
+    let loggedUser= await UserModel.findOne({email:email,password:password})
     if(!loggedUser)return res.status(404).send({status:false, message: "No such user exists"})
 
     // generating a token
     let token = jwt.sign(
     {
     userId: loggedUser._id,
+    iat:Math.floor(Date.now()/1000)+(60*60)
     },
     "book-management-project",{expiresIn:"0.5h"});
     

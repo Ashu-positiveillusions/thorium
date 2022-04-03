@@ -17,7 +17,7 @@ try{
     //checks for valid userId format    
     let checkObjectId = validator.isValidObjectId(bookData.userId)
     if(!checkObjectId) return res.status(400).send({status:false, message: "Please enter a valid userId"})
-    if(bookData.userId.trim() !== req.headers["userid"]) return res.status(401).send({status: false, message: "Please create a book for the loggedIn user as you are not authorized"})
+    if(bookData.userId !== req.headers["userid"]) return res.status(401).send({status: false, message: "Please create a book for the loggedIn user as you are not authorized"})
 
     // checking if we get any data from request body
     if(!(validator.isValid(bookData))) return res.status(400).send({status:false, message:"Please enter book details"})

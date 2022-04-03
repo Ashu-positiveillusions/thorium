@@ -46,8 +46,11 @@ try{
     
     //address validation
     let address=userInfo.address
-    if(typeof(address)!="object"){
-        return res.status(400).send({status:false, message:"Address should be in Object format"})
+    
+    if(address){
+        if(typeof(address)!="object"){
+            return res.status(400).send({status:false, message:"Address should be in Object format"})
+        }
     }
     
     const data=await UserModel.create(userInfo);

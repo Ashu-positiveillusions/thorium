@@ -3,10 +3,13 @@ const bodyParser = require('body-parser');
 const route = require('../src/routes/route');
 const { default: mongoose } = require('mongoose');
 const app = express();
+const multer = require("multer")
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-mongoose.connect("mongodb+srv://Ashu-positiveillusions:TPXgNbKjCwkqz4Ax@cluster0.yf3ho.mongodb.net/group22database-forchecking?retryWrites=true&w=majority", {
+app.use(multer().any())
+
+mongoose.connect("mongodb+srv://Ashu-positiveillusions:TPXgNbKjCwkqz4Ax@cluster0.yf3ho.mongodb.net/AWS-S3-Check?retryWrites=true&w=majority", {
     useNewUrlParser: true
 })
     .then(() => console.log("MongoDb is connected"))

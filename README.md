@@ -34,7 +34,7 @@
   userId: {ObjectId, mandatory, refs to user model},
   ISBN: {string, mandatory, unique},
   category: {string, mandatory},
-  subcategory: {string, mandatory},
+  subcategory: [string, mandatory],
   reviews: {number, default: 0, comment: Holds number of reviews of this book},
   deletedAt: {Date, when the document is deleted}, 
   isDeleted: {boolean, default: false},
@@ -176,7 +176,7 @@ Refer below sample
   address: {
     street: "110, Ridhi Sidhi Tower",
     city: "Jaipur",
-    pincode: 400001
+    pincode: "400001"
   },
   "createdAt": "2021-09-17T04:25:07.803Z",
   "updatedAt": "2021-09-17T04:25:07.803Z",
@@ -253,7 +253,7 @@ Refer below sample
     "excerpt": "book body",
     "userId": ObjectId("88abc190ef0288abc190ef02")
     "category": "Book",
-    "subcategory": "Non fiction", "Self Help"],
+    "subcategory": ["Non fiction", "Self Help"],
     "deleted": false,
     "reviews": 0,
     "deletedAt": "", // if deleted is true deletedAt will have a date 2021-09-17T04:25:07.803Z,
